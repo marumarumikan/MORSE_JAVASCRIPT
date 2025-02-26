@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>モールス信号ジェネレーター</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        textarea, select, input, button { margin-top: 10px; font-size: 16px; }
+        textarea { width: 80%; height: 100px; }
+    </style>
+</head>
+<body>
+    <h2>モールス信号ジェネレーター</h2>
+    <textarea id="inputText" placeholder="ここにテキストを入力"></textarea><br>
+
+    <label>速度 (WPM):</label>
+    <input type="number" id="speed" value="20" min="5" max="50"><br>
+
+    <label>周波数 (Hz):</label>
+    <input type="number" id="frequency" value="700" min="300" max="1000"><br>
+
+    <button onclick="playMorse()">再生</button>
+
+    <script>
+        const morseCodeMap = {
+            'a': '.-', 'b': '-...', 'c': '-.-.', 'd': '-..', 'e': '.', 'f': '..-.', 'g': '--.', 'h': '....',
+            'i': '..', 'j': '.---', 'k': '-.-', 'l': '.-..', 'm': '--', 'n': '-.', 'o': '---', 'p': '.--.',
+            'q': '--.-', 'r': '.-.', 's': '...', 't': '-', 'u': '..-', 'v': '...-', 'w': '.--', 'x': '-..-',
+            'y': '-.--', 'z': '--..', 
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.', 'G': '--.', 'H': '....',
+            'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---', 'P': '.--.',
+            'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+            'Y': '-.--', 'Z': '--..',
+            '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
+            '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----',
+            ' ': '/', 
+            'ア': '--.--', 'イ': '.-', 'ウ': '..-', 'エ': '-.---', 'オ': '.-...', 
+            'カ': '-.-..', 'キ': '-.-..', 'ク': '...-', 'ケ': '-.--', 'コ': '----', 
+            'サ': '-.-.-', 'シ': '--.-.', 'ス': '---.-', 'セ': '.---.', 'ソ': '---.',
+            'タ': '-.', 'チ': '..-.', 'ツ': '.--.', 'テ': '.-.--', 'ト': '..-..', 
+            'ナ': '.-.', 'ニ': '-.-.', 'ヌ': '....', 'ネ': '--.-', 'ノ': '..--', 
+            'ハ': '-...', 'ヒ': '--..-', 'フ': '--..', 'ヘ': '.', 'ホ': '-..', 
+            'マ': '-..-', 'ミ': '..-.-', 'ム': '-', 'メ': '-...-', 'モ': '-..-.', 
+            'ヤ': '.--', 'ユ': '-..--', 'ヨ': '--', 'ラ': '...', 'リ': '--.', 
+            'ル': '-.--.', 'レ': '---', 'ロ': '.-.-', 'ワ': '-.-', 'ヲ': '.---', 
+            'ン': '.-.-.', 
+            'あ': '--.--', 'い': '.-', 'う': '..-', 'え': '-.---', 'お': '.-...', 
+            'か': '.-..', 'き': '-.-..', 'く': '...-', 'け': '-.--', 'こ': '----', 
+            'さ': '-.-.-', 'し': '--.-.', 'す': '---.-', 'せ': '.---.', 'そ': '---.',
+            'た': '-.', 'ち': '..-.', 'つ': '.--.', 'て': '.-.--', 'と': '..-..', 
+            'な': '.-.', 'に': '-.-.', 'ぬ': '....', 'ね': '--.-', 'の': '..--', 
+            'は': '-...', 'ひ': '--..-', 'ふ': '--..', 'へ': '.', 'ほ': '-..', 
+            'ま': '-..-', 'み': '..-.-', 'む': '-', 'め': '-...-', 'も': '-..-.', 
+            'や': '.--', 'ゆ': '-..--', 'よ': '--', 'ら': '...', 'り': '--.', 
+            'る': '-.--.', 'れ': '---', 'ろ': '.-.-', 'わ': '-.-', 'を': '.---', 
+            'ん': '.-.-.'
+        };
+
+        function textToMorse(text) {
+            return text.split('').map(char => morseCodeMap[char] || '').join(' ');
+        }
+
+        function playMorse() {
+            const text = document.getElementById('inputText').value;
+            const morse = textToMorse(text);
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            let time = ctx.currentTime;
+            const speedWPM = document.getElementById('speed').value;
+            const freq = document.getElementById('frequency').value;
+            const speedCPM = speedWPM * 50;  
+            const dotTime = 60 / speedCPM; 
+
+            function beep(duration) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(time);
+                gain.gain.setValueAtTime(1, time);
+                time += duration;
+                gain.gain.setValueAtTime(0, time);
+                osc.stop(time);
+                time += dotTime; 
+            }
+
+            for (let symbol of morse) {
+                if (symbol === '.') {
+                    beep(dotTime);
+                } else if (symbol === '-') {
+                    beep(dotTime * 3);
+                } else if (symbol === '/') {
+                    time += dotTime * 7; 
+                } else {
+                    time += dotTime * 3; 
+                }
+            }
+        }
+    </script>
+</body>
+</html>
